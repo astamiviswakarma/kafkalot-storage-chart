@@ -1,0 +1,4 @@
+dependencies:
+  - name: mongodb
+    version: 5.5.0
+    repository: https://charts.bitnami.com/bitnami

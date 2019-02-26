@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kafkalot-storage-chart.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "kafkalot-storage-chart.name" . }}
+    helm.sh/chart: {{ include "kafkalot-storage-chart.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "kafkalot-storage-chart.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "kafkalot-storage-chart.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: KAFKALOT_STORAGE_CONNECTOR_CLUSTERHOST
+              value: {{ default "my-confluent-oss-cp-kafka-connect" .Values.kafkalot.storage.connector.clusterhost }}
+            - name: KAFKALOT_STORAGE_CONNECTOR_CLUSTERPORT
+              value: {{ default "8083" .Values.kafkalot.storage.connector.clusterport | quote}}
+            - name: KAFKALOT_STORAGE_APP_PORT
+              value: {{ default "3003" .Values.kafkalot.storage.app.port | quote}}
+            - name: KAFKALOT_STORAGE_MONGO_HOST
+              value: {{ template "kafkalot-storage-chart.mongo.host" .}}
+            - name: KAFKALOT_STORAGE_MONGO_DB
+              value: {{ default "kafkalot-local" .Values.kafkalot.storage.mongo.db }}
+            - name: KAFKALOT_STORAGE_MONGO_PORT
+              value: "27017"
+          ports:
+            - name: http
+              containerPort: {{ default 3003 .Values.kafkalot.storage.app.port}}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /api/v1/connector-plugins
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /api/v1/connector-plugins
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
